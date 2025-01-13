@@ -1,0 +1,604 @@
+{
+  "name": "Course Guider Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6c364d12-e8b1-4921-9a99-28be22c076b6",
+              "name": "query",
+              "value": "={{ $json.body.query }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -240,
+        -40
+      ],
+      "id": "35d2cc23-1bd1-4bc1-be39-1605e035f472",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Edit Fields').item.json.query }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an intelligent assistant trained to identify course names and duration from user queries. Your primary goal is to extract the most relevant course name or topic based and duration on the user’s request and add one emoji to the course name. Provide concise and accurate responses by interpreting the intent behind the user query. Ensure that the extracted course name and duration is clear and reflects standard course or subject terminology. If the user query is vague, extract the most probable course name based on common understanding.\"  Examples:  User Query: \"I want to learn about coding websites.\" Course: Web Development🌐  User Query: \"What should I study to become a data scientist in 1year?\" Course: Data Science 🤖 Duration:1year User Query: \"Help me find resources for cloud technologies.\" Course: Cloud Computing ☁️ Duration:Default  User Query: \"I need guidance for mastering AI tools in 6months.\" Course: Artificial Intelligence 🤖 Duration:6Months User Query: \"Can you recommend something for financial markets?\" Course: Finance 💸 Duration:Default"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        220,
+        -40
+      ],
+      "id": "b499ffc4-28a0-4158-b85b-d0e73a706f94",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"course\": \"WebDevlopement\",\n  \"duration\":\"6months\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        300,
+        160
+      ],
+      "id": "c4142228-76c7-4612-9460-6052e0b56609",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Give me the {{ $('Basic LLM Chain').item.json.output.duration }} roadmap for the course : {{ $('Basic LLM Chain').item.json.output.course }} ",
+        "options": {
+          "systemMessage": "You are a specialized roadmap creator designed to assist users in achieving their learning goals effectively within a specified duration. When a user provides a course name and a timeframe (e.g., 3 months, 6 months, 1 year), your task is to:\n\n1. **Understand the Course Topic:** Break down the subject into key learning modules or stages.  \n2. **Divide the Duration:** Allocate the given time into smaller, manageable timeframes (e.g., months or weeks).  \n3. **Set Milestones:** For each timeframe, specify clear learning goals, practical tasks, and relevant resources.  \n4. **Include Actionable Outputs:** Ensure the roadmap contains hands-on tasks or projects to reinforce learning.  \n\nAlways provide **concise, structured, and engaging responses** with emojis to make the roadmap visually appealing. Focus on practical value and tailor the roadmap to the duration and complexity of the course topic. **Do not include any introductory or concluding text**—just provide the roadmap directly.\"\n\n---\n\n**Example Interaction:**\n\n**User Input:**  \n\"Roadmap for Web Development in 6 months.\"\n\n**Agent Response:**  \n\n---\n\n### 🚀 **Roadmap to Mastering Web Development**  \n**Duration:** 6 Months  \n\n---\n\n#### **Month 1: Foundations**  \n🎯 **Goal:** Learn the basics of web development.  \n- 🌐 Introduction to HTML & CSS  \n- 🎨 Basic styling and responsive design  \n- 🔧 Set up your development environment (VS Code, Git)  \n- 🛠️ Build a simple static website  \n\n---\n\n#### **Month 2-3: Core Skills Development**  \n🎯 **Goal:** Dive into front-end and back-end basics.  \n- 🖥️ JavaScript fundamentals (ES6+)  \n- ⚛️ Introduction to React.js or Vue.js  \n- 🗄️ Basics of Node.js and Express.js  \n- 🛠️ Build a basic CRUD application  \n\n---\n\n#### **Month 4: Advanced Concepts**  \n🎯 **Goal:** Master advanced topics and frameworks.  \n- 🔐 Authentication and authorization (JWT, OAuth)  \n- 🗃️ Database management (SQL, MongoDB)  \n- 🚀 Advanced React/Vue (State management, hooks, etc.)  \n- 🛠️ Build a full-stack project  \n\n---\n\n#### **Month 5: Practice and Projects**  \n🎯 **Goal:** Apply skills through real-world projects.  \n- 🌟 Build a portfolio website  \n- 🛒 Create an e-commerce site  \n- 📱 Develop a responsive web app  \n- 🧪 Test and debug your projects  \n\n---\n\n#### **Month 6: Review and Mastery**  \n🎯 **Goal:** Solidify knowledge and prepare for job readiness.  \n- 📚 Review core concepts and troubleshoot weak areas  \n- 🧠 Practice coding challenges (LeetCode, HackerRank)  \n- 📝 Optimize your portfolio and LinkedIn profile  \n- 🚀 Start applying for jobs or freelance projects  \n\n---"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        480,
+        200
+      ],
+      "id": "3bd1ea7e-df57-4366-a4ba-8ab580da538f",
+      "name": "Roadmapper Agent"
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.session_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ {\n\"type\": \"ai\",\n\"content\": $json.output,\n\"data\": {},\n\"additional_kwargs\": {},\n\"response_metadata\": {}\n} }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        780,
+        420
+      ],
+      "id": "1edaa0d7-73fa-4358-8fd6-cc0d6e2f76c4",
+      "name": "Supabase1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "WYahGsiTgVKJGSXG",
+          "name": "Supabase fake"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.session_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ {\n\"type\": \"ai\",\n\"content\": $json.output,\n\"data\": {},\n\"additional_kwargs\": {},\n\"response_metadata\": {}\n} }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        440
+      ],
+      "id": "cc49cf48-b973-40c8-9543-1f32cb5e063d",
+      "name": "Supabase2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "WYahGsiTgVKJGSXG",
+          "name": "Supabase fake"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Suggest the more frame works or tools to master the {{ $('Basic LLM Chain').item.json.output.course }} on based on this context {{ $('Roadmapper Agent').item.json.output }}",
+        "options": {
+          "systemMessage": "=You are a specialized learning assistant designed to help users identify the prerequisites, frameworks, and tools they must know to master a specific course or skill. When a user provides a course name or skill, your task is to:  \n\n1. **List Prerequisites:** Identify foundational knowledge or skills required to start learning the topic.  \n2. **Recommend Frameworks/Libraries:** Provide a list of essential frameworks, libraries, or technologies used in the field.  \n3. **Suggest Tools:** Mention tools or software that are commonly used for development, testing, or deployment.  \n\nAlways provide **concise, structured, and engaging responses** with emojis to make the information visually appealing. Do not include any introductory or concluding text—just provide the prerequisites, frameworks, and tools directly.\"\n\n---\n\n**Example Interaction:**\n\n**User Input:**  \n\"Prerequisites and tools to master Web Development.\"\n\n**Agent Response:**  \n\n---\n\n### 🛠️ **Prerequisites, Frameworks, and Tools for Web Development**  \n\n#### **Prerequisites:**  \n- 🌐 Basic understanding of how the internet works (HTTP/HTTPS, browsers, servers).  \n- 💻 Familiarity with basic programming concepts (variables, loops, conditionals).  \n- 📄 Basic knowledge of HTML and CSS for structuring and styling web pages.  \n- 🖥️ Understanding of JavaScript fundamentals (ES6+ syntax, DOM manipulation).  \n\n---\n\n#### **Frameworks/Libraries:**  \n- ⚛️ **Front-end:** React.js, Vue.js, or Angular for building dynamic user interfaces.  \n- 🗄️ **Back-end:** Express.js (Node.js), Django (Python), or Ruby on Rails for server-side development.  \n- 🎨 **CSS Frameworks:** Bootstrap, Tailwind CSS, or Material-UI for responsive design.  \n- 🛠️ **Full-stack:** Next.js or Nuxt.js for server-side rendering and full-stack development.  \n\n---\n\n#### **Tools:**  \n- 🔧 **Code Editors:** VS Code, Sublime Text, or Atom.  \n- 🐙 **Version Control:** Git and GitHub for collaboration and version management.  \n- 🚀 **Package Managers:** npm or Yarn for managing JavaScript libraries.  \n- 🧪 **Testing Tools:** Jest, Cypress, or Selenium for testing applications.  \n- 🛠️ **DevOps:** Docker for containerization, and CI/CD tools like Jenkins or GitHub Actions.  \n- 🌐 **Deployment:** Netlify, Vercel, or AWS for hosting web applications.  \n\n---"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        920,
+        200
+      ],
+      "id": "13453cfc-23c4-4c7d-b9cb-ec6dd4e21b33",
+      "name": "Framework-Suggestor"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Give me roles which will suit to the course :  {{ $('Basic LLM Chain').item.json.output.course }} ",
+        "options": {
+          "systemMessage": "You are a highly knowledgeable and efficient assistant specialized in mapping educational courses to relevant job roles. When a user provides a course name, your task is to:  \n\n1. **Analyze the Course:** Identify the skills and knowledge gained from the course.  \n2. **Map to Job Roles:** Provide a list of potential job roles and industries that align with the course content.  \n3. **Use Emojis:** Make the response visually engaging by adding relevant emojis to each job role and industry.  \n4. **Structure the Response:** Use clear headings (e.g., **Potential Job Roles**, **Industries**) and separate items with line breaks for readability.  \n5. **Clarify Ambiguity:** If the course name is too broad or unclear, suggest roles for the most common interpretations.  \n\nEnsure your responses are **clear, concise, and highly relevant**, reflecting up-to-date market trends and job demands. Do not include any introductory or concluding text—just provide the job roles and industries directly in a structured format.\"\n\n---\n\n**Example Interaction:**\n\n**User Input:**  \n\"Job roles for a Web Development course.\"\n\n**Agent Response:**  \n\n---\n\n🚀 **Job Roles for Web Development**  \n\n**Potential Job Roles:**  \n🤖 Full Stack Developer  \n\n📊 Front-end Developer  \n\n🏗️ Back-end Developer  \n\n🎨 Web Designer  \n\n🔒 Quality Assurance Engineer  \n\n💡 UI/UX Designer  \n\n👨‍💼 Webmaster  \n\n👩‍💻 Junior Web Developer  \n\n📈 Web Analyst  \n\n🛍️ E-commerce Developer  \n\n---\n\n**Industries:**  \n💻 Technology (Startups, tech companies like Google, Facebook)  \n\n🏦 Finance (Online banking, fintech solutions)  \n\n🏥 Healthcare (Patient portals, telemedicine platforms)  \n\n🛒 E-commerce (Online stores, marketplaces like Amazon)  \n\n🎮 Gaming (Interactive web-based games)  \n\n📰 Media (News websites, content platforms)  \n\n---"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1340,
+        200
+      ],
+      "id": "745af9a7-2c9f-4cca-83c1-92f2dfc39ba6",
+      "name": "Avilable Roles"
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.session_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ {\n\"type\": \"ai\",\n\"content\": $json.output,\n\"data\": {},\n\"additional_kwargs\": {},\n\"response_metadata\": {}\n} }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        440
+      ],
+      "id": "50c55571-dfa2-45b2-987e-491d006a8861",
+      "name": "Supabase3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "WYahGsiTgVKJGSXG",
+          "name": "Supabase fake"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "1fa49c19-0909-46ad-b882-becf2b67e595",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        -40
+      ],
+      "id": "43b66d9c-1082-48a3-a91a-3397c75445f7",
+      "name": "Webhook",
+      "webhookId": "1fa49c19-0909-46ad-b882-becf2b67e595"
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.session_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ { \"type\": \"human\", \"content\": $json.query, \"additional_kwargs\": {}, \"response_metadata\": {} } }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -40
+      ],
+      "id": "4e9415b0-9421-4c94-8cc8-6c3b66f4fe9a",
+      "name": "Add user message to DB",
+      "credentials": {
+        "supabaseApi": {
+          "id": "WYahGsiTgVKJGSXG",
+          "name": "Supabase fake"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4c10f3a8-de89-4b5e-8f2d-067d33928942",
+              "name": "success",
+              "value": "true",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1840,
+        200
+      ],
+      "id": "27220783-937e-4523-b69b-97dc3ef01aee",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-n8n-Signature",
+                "value": "EvtIS^EBVISeie6svB@6ev"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2060,
+        0
+      ],
+      "id": "23f40f85-743a-4b2b-8916-51c960771785",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "# Course Guider\n\nAuthor: [Perumalla Venkata Naga Dhanush](https://www.linkedin.com/in/dhanush-perumalla-917b70266/)\n\nThis n8n-powered agent is your personal assistant for creating structured, engaging, and research-backed learning roadmaps, prerequisites, and job role mappings for any course. It takes a course name and duration as input, analyzes the topic, and generates tailored roadmaps, prerequisites, tools, and job role suggestions to help learners achieve their goals effectively.\n\n## Features\n- Dynamic Roadmap Generation: Breaks down any course into a step-by-step learning roadmap with clear milestones and actionable tasks.\n- Prerequisites and Tools: Identifies foundational knowledge, frameworks, and tools required to master the course.\n- Job Role Mapping: Maps course content to relevant job roles and industries, reflecting up-to-date market trends.\n- Engaging and Visual Outputs: Uses emojis and structured formatting to make content visually appealing and easy to follow.",
+        "height": 463,
+        "width": 691,
+        "color": 6
+      },
+      "id": "10f20d53-fb3f-4320-a2d2-3374b4b26833",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-haiku-20241022",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        160
+      ],
+      "id": "bb0726d4-4abf-4e20-b6ce-a7250e64cf18",
+      "name": "Anthropic Chat Model"
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-haiku-20241022",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        1400,
+        460
+      ],
+      "id": "dec44ebd-a4e3-436f-970f-375963751b93",
+      "name": "Anthropic Chat Model1"
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-haiku-20241022",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        440
+      ],
+      "id": "03ed7a1a-5f76-46bc-b962-ea6ace8b4d2f",
+      "name": "Anthropic Chat Model2"
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-haiku-20241022",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        1000,
+        480
+      ],
+      "id": "2eec0315-f811-446a-8c00-eb31f98be137",
+      "name": "Anthropic Chat Model3"
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.session_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ {\n\"type\": \"ai\",\n\"content\":`# Here's the guide to master ${$json.output.course}`,\n\"data\": {},\n\"additional_kwargs\": {},\n\"response_metadata\": {}\n} }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        600,
+        -40
+      ],
+      "id": "371a725e-d3da-4e0b-938e-19eb1aafc86d",
+      "name": "Add AI message to DB",
+      "credentials": {
+        "supabaseApi": {
+          "id": "WYahGsiTgVKJGSXG",
+          "name": "Supabase fake"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Add user message to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Add AI message to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Roadmapper Agent": {
+      "main": [
+        [
+          {
+            "node": "Supabase1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase1": {
+      "main": [
+        [
+          {
+            "node": "Framework-Suggestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase2": {
+      "main": [
+        [
+          {
+            "node": "Avilable Roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Framework-Suggestor": {
+      "main": [
+        [
+          {
+            "node": "Supabase2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avilable Roles": {
+      "main": [
+        [
+          {
+            "node": "Supabase3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add user message to DB": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Roadmapper Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Framework-Suggestor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Avilable Roles",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add AI message to DB": {
+      "main": [
+        [
+          {
+            "node": "Roadmapper Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1e93053d-84d7-4b4f-9f9b-bcf8bd686455",
+  "meta": {
+    "instanceId": "6963448af4d065b0bac0225168a129268f3d4cbfa924f2dbca664acd7cfe2449"
+  },
+  "id": "paBCSxMpV4myxytB",
+  "tags": []
+}
