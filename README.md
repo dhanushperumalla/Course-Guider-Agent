@@ -1,117 +1,190 @@
-# **Course Guider Agent**  
-**Author:** [Perumalla Venkata Naga Dhanush](https://www.linkedin.com/in/dhanush-perumalla-917b70266/)
+# Course Guider Agent 🤖
 
-An n8n-powered agent that generates structured, engaging, and research-backed learning roadmaps, prerequisites, and job role mappings for any course. It helps learners, educators, and career advisors by providing tailored guidance to master a course effectively within a specified timeframe.  
+An intelligent AI-powered agent that provides personalized guidance on technology trends and learning paths for aspiring developers.
 
----
+## 🚀 Installation & Setup
 
-## **Features**  
+### Prerequisites
+- Node.js and npm installed
+- Supabase account
+- N8N account/self-hosted instance
+- Required API keys
 
-- **Dynamic Roadmap Generation:** Breaks down any course into a step-by-step learning roadmap with clear milestones and actionable tasks.  
-- **Prerequisites and Tools:** Identifies foundational knowledge, frameworks, and tools required to master the course.  
-- **Job Role Mapping:** Maps course content to relevant job roles and industries, reflecting up-to-date market trends.  
-- **Customizable Duration:** Adapts the roadmap to fit specified timeframes (e.g., 3 months, 6 months, 1 year).  
-- **Engaging and Visual Outputs:** Uses emojis and structured formatting to make content visually appealing and easy to follow.  
-- **Platform-Ready Content:** Generates concise, shareable outputs for blogs, social media, or direct learner use.  
-
----
-
-## **How It Works**  
-
-1. Takes the **course name** and **duration** as input.  
-2. Analyzes the course topic and breaks it into key learning modules.  
-3. Identifies prerequisites, tools, and frameworks required for the course.  
-4. Maps the course content to relevant job roles and industries.  
-5. Generates a structured roadmap, prerequisites, and job role suggestions in a clean, engaging format.  
-
----
-
-## **Example Usage**  
-
-### **Input**  
-```json
-{
-    "course": "Web Development",
-    "duration": "6 months"
-}
+### 1. Clone the Repository
+```bash
+git clone <repository-url>
+cd course-guider-agent
 ```
 
-### **Example Response**  
-```
-🚀 Roadmap to Mastering Web Development  
-Duration: 6 Months  
+### 2. N8N Workflow Setup
+1. Visit your N8N instance/website
+2. Import the `course_guider_agent.json` workflow file
+3. Configure the required credentials in N8N
+4. Test the workflow to ensure proper functionality
 
----
+### 3. Database Setup (Supabase)
+Run the following SQL commands in your Supabase SQL editor:
 
-#### Month 1: Foundations  
-🎯 Goal: Learn the basics of web development.  
-- 🌐 Introduction to HTML & CSS  
-- 🎨 Basic styling and responsive design  
-- 🔧 Set up your development environment (VS Code, Git)  
-- 🛠️ Build a simple static website  
+```sql
+-- Enable the pgcrypto extension for UUID generation
+-- Note: If you're using Supabase, the pgcrypto extension is already enabled by default.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
----
+-- Create messages table
+CREATE TABLE messages (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    session_id TEXT NOT NULL,
+    message JSONB NOT NULL
+);
 
-#### Month 2-3: Core Skills Development  
-🎯 Goal: Dive into front-end and back-end basics.  
-- 🖥️ JavaScript fundamentals (ES6+)  
-- ⚛️ Introduction to React.js or Vue.js  
-- 🗄️ Basics of Node.js and Express.js  
-- 🛠️ Build a basic CRUD application  
-
----
-
-#### Prerequisites, Frameworks, and Tools  
-
-Prerequisites:  
-- 🌐 Basic understanding of how the internet works (HTTP/HTTPS, browsers, servers).  
-- 💻 Familiarity with basic programming concepts (variables, loops, conditionals).  
-
-Frameworks/Libraries:  
-- ⚛️ Front-end: React.js, Vue.js, or Angular for building dynamic user interfaces.  
-- 🗄️ Back-end: Express.js (Node.js), Django (Python), or Ruby on Rails for server-side development.  
-
-Tools:  
-- 🔧 Code Editors: VS Code, Sublime Text, or Atom.  
-- 🐙 Version Control: Git and GitHub for collaboration and version management.  
-
----
-
-#### Job Roles for Web Development  
-
-Potential Job Roles:  
-🤖 Full Stack Developer  
-
-📊 Front-end Developer  
-
-🏗️ Back-end Developer  
-
-🎨 Web Designer  
-
-🔒 Quality Assurance Engineer  
+-- Create indexes for better performance
+CREATE INDEX idx_messages_session_id ON messages(session_id);
+CREATE INDEX idx_messages_created_at ON messages(created_at);
 ```
 
+### 4. Frontend Setup
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure environment variables:
+   Create a `.env` file and add your API keys and endpoints:
+   ```
+   VITE_API_ENDPOINT=your_api_endpoint
+   VITE_OTHER_REQUIRED_KEYS=your_keys
+   VITE_N8N_END_POINT=your_n8n_endpoint
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## 🌟 Features
+
+### 1. Tech Trend Analysis
+- Real-time updates on trending technology news
+- Focus on emerging technologies and breakthroughs
+- Coverage of key sectors like AI, quantum computing, cybersecurity, and more
+
+### 2. Learning Path Generation
+- Customized learning roadmaps for different tech domains
+- Detailed breakdown of skills and resources needed
+- Time-based progression tracking
+- Comprehensive curriculum planning
+
+### 3. Career Guidance
+- Industry-specific job role recommendations
+- Skills mapping to career opportunities
+- Industry trends and market analysis
+
+## 🚀 Example Capabilities
+
+1. **Tech Trends Reporting**
+   - Provides detailed analysis of tech trends in 2025
+   - Covers various domains including:
+     - Quantum Computing
+     - AI-Powered Cybersecurity
+     - 5G/6G Technologies
+     - Sustainable Tech
+     - Extended Reality (XR)
+     - Blockchain and Web3
+     - Autonomous Systems
+     - Biometric Security
+
+2. **Web Development Learning Path**
+   - Comprehensive 2-year roadmap
+   - Structured learning phases:
+     - Front-End Basics
+     - JavaScript & Frameworks
+     - Back-End Development
+     - Full-Stack Integration
+     - Advanced Topics
+     - Specialization
+   - Project-based learning approach
+   - Industry-standard tools and technologies
+
+3. **Career Development**
+   - Job role recommendations
+   - Industry-specific guidance
+   - Technology stack suggestions
+   - Market trend analysis
+
+## 💡 How to Use
+
+1. **Ask About Tech Trends**
+   ```
+   "What are the trending news about tech in 2025?"
+   ```
+
+2. **Request Learning Guidance**
+   ```
+   "Guide me to master Web-Dev in 2025"
+   ```
+
+3. **Explore Career Paths**
+   ```
+   "Show thinking process for web development careers"
+   ```
+
+## 🧠 AI Models & Infrastructure
+
+### AI Platform
+- **GROQ Platform**: Utilized for high-performance AI inference
+- **Model**: DeepSeek-1 for advanced thinking and reasoning capabilities
+- **Benefits**:
+  - Ultra-fast response times
+  - High-quality reasoning
+  - Efficient resource utilization
+  - Scalable infrastructure
+
+## 🛠️ Technical Stack
+
+- Natural Language Processing via DeepSeek-1
+- GROQ Platform for AI inference
+- Real-time Data Analysis
+- Customized Response Generation
+- Interactive Learning Paths
+- Career Mapping Algorithms
+
+## 📈 Benefits
+
+- Stay updated with latest tech trends
+- Get personalized learning paths
+- Understand career opportunities
+- Access curated resources
+- Track learning progress
+- Make informed career decisions
+
+## 🎯 Target Audience
+
+- Aspiring Developers
+- Tech Professionals
+- Career Changers
+- Students
+- Tech Enthusiasts
+- Learning Path Seekers
+
+## 📝 Note
+
+This agent is continuously updated with the latest information and trends in the technology sector. The responses are AI-generated and should be used as guidance alongside other learning resources.
+
+## 🤝 Contributing
+
+Feel free to contribute to this project by:
+1. Suggesting new features
+2. Reporting issues
+3. Improving documentation
+4. Adding new learning resources
+
+
 ---
 
-## **Usage Notes**  
-
-1. Provide **specific course names** for better results.  
-2. Specify the **desired duration** (e.g., 3 months, 6 months, 1 year).  
-3. The agent focuses on **up-to-date industry trends** and **best practices**.  
-4. Outputs are designed to be **shareable** and **platform-ready**.  
-
----
-
-## **Credentials Required**  
-
-- **Anthropic API Key:** For generating structured and engaging content.  
-- **n8n Workflow Access:** To run and customize the agent.  
-
----
-
-## **Contributing**  
-
-This agent is part of the oTTomator agents collection. For contributions or issues, please refer to the main repository guidelines.
-
-
----
+Built with ❤️ for the tech community 
