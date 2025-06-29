@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { Send, Loader2 } from 'lucide-react';
 import { ChatMessage } from './components/ChatMessage';
 import { Sidebar } from './components/Sidebar';
 import { supabase } from './lib/supabase';
 import { Message, DatabaseMessage, ChatSession } from './types';
+import HeroGeometric from './components/ui/modern-hero-section';
 
-function App() {
+function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [input, setInput] = useState('');
@@ -77,7 +79,7 @@ function App() {
           timestamp: new Date(msg.created_at)
         };
       });
-      setMessages(formattedMessages);
+      setMessages(formattedMessages as Message[]);
     }
   };
 
@@ -223,6 +225,18 @@ function App() {
         </form>
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HeroGeometric />} />
+        <Route path="/chat" element={<ChatInterface />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
