@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, LogOut, User } from 'lucide-react';
 import { ChatMessage } from './components/ChatMessage';
 import { Sidebar } from './components/Sidebar';
 import { supabase } from './lib/supabase';
 import { Message, DatabaseMessage, ChatSession } from './types';
 import HeroGeometric from './components/ui/modern-hero-section';
+import { Login } from './components/Auth/Login';
+import { EnhancedSignup } from './components/Auth/EnhancedSignup';
+import { ProtectedRoute } from './components/Auth/ProtectedRoute';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { PasswordStrengthDemo } from './components/PasswordStrengthDemo';
 
 function ChatInterface() {
+  const { user, signOut } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [input, setInput] = useState('');
@@ -184,8 +190,21 @@ function ChatInterface() {
       />
       
       <div className="flex flex-col flex-1">
-        <div className="bg-white border-b px-6 py-4">
-          <h1 className="text-2xl font-bold text-center text-gray-800">Course Guider Agent</h1>
+        <div className="bg-white border-b px-6 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-800">Course Guider Agent</h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <User className="w-4 h-4" />
+              <span>{user?.email}</span>
+            </div>
+            <button
+              onClick={signOut}
+              className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message) => (
@@ -230,13 +249,25 @@ function ChatInterface() {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HeroGeometric />} />
-        <Route path="/chat" element={<ChatInterface />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HeroGeometric />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<EnhancedSignup />} />
+          <Route path="/demo" element={<PasswordStrengthDemo />} />
+          <Route 
+            path="/chat" 
+            element={
+              <ProtectedRoute>
+                <ChatInterface />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

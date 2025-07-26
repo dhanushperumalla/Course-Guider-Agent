@@ -1,7 +1,9 @@
 import React from 'react';
 import { Mail, MessageSquare, Phone, ArrowRight } from 'lucide-react';
+import { useForm, ValidationError } from '@formspree/react';
 
 export const Contact = () => {
+    const [state, handleSubmit] = useForm("xblkopvr");
     return (
         <div className="relative mx-auto max-w-7xl p-8 bg-[#030303]">
             {/* Decorative elements */}
@@ -65,39 +67,59 @@ export const Contact = () => {
                 <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl blur-xl transform -rotate-6" />
                     <div className="relative bg-white/[0.02] backdrop-blur-sm rounded-2xl p-8 border border-white/10">
-                        <form className="space-y-6">
+                        {state.succeeded ? (
+                          <div className="text-center py-12">
+                            <h3 className="text-2xl font-bold text-emerald-400 mb-2">Thank you!</h3>
+                            <p className="text-gray-200">Your message has been sent. We'll get back to you soon.</p>
+                          </div>
+                        ) : (
+                        <form className="space-y-6" onSubmit={handleSubmit}>
                             <div>
-                                <label className="text-gray-200 text-sm font-medium mb-2 block">Your Name</label>
+                                <label htmlFor="name" className="text-gray-200 text-sm font-medium mb-2 block">Your Name</label>
                                 <input
+                                    id="name"
                                     type="text"
+                                    name="name"
                                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
                                     placeholder="John Doe"
+                                    required
                                 />
+                                <ValidationError prefix="Name" field="name" errors={state.errors} />
                             </div>
                             <div>
-                                <label className="text-gray-200 text-sm font-medium mb-2 block">Email Address</label>
+                                <label htmlFor="email" className="text-gray-200 text-sm font-medium mb-2 block">Email Address</label>
                                 <input
+                                    id="email"
                                     type="email"
+                                    name="email"
                                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
                                     placeholder="john@example.com"
+                                    required
                                 />
+                                <ValidationError prefix="Email" field="email" errors={state.errors} />
                             </div>
                             <div>
-                                <label className="text-gray-200 text-sm font-medium mb-2 block">Message</label>
+                                <label htmlFor="message" className="text-gray-200 text-sm font-medium mb-2 block">Message</label>
                                 <textarea
+                                    id="message"
+                                    name="message"
                                     rows={4}
                                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none"
                                     placeholder="Your message..."
+                                    required
                                 />
+                                <ValidationError prefix="Message" field="message" errors={state.errors} />
                             </div>
                             <button
                                 type="submit"
-                                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium py-3 px-6 rounded-lg hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-purple-500/50 relative group overflow-hidden"
+                                disabled={state.submitting}
+                                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium py-3 px-6 rounded-lg hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-purple-500/50 relative group overflow-hidden disabled:opacity-60"
                             >
                                 <span className="absolute inset-0 bg-white/20 rounded-lg transform translate-y-full transition-transform group-hover:translate-y-0" />
-                                <span className="relative">Send Message</span>
+                                <span className="relative">{state.submitting ? 'Sending...' : 'Send Message'}</span>
                             </button>
                         </form>
+                        )}
                     </div>
                 </div>
             </div>
