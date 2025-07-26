@@ -3,6 +3,8 @@ import { cn } from "../../lib/utils"
 import { About } from "../About";
 import Contact from "../Contact";
 import Footer from "../Footer";
+import { useAuth } from "../../contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 function ElegantShape({
   className,
@@ -83,6 +85,7 @@ export default function HeroGeometric({
   description?: string
   logo?: string
 }) {
+  // const { user } = useAuth(); // No longer needed
   const fadeUpVariants = {
     hidden: { opacity: 0, y: 30 },
     visible: (i: number) => ({
@@ -99,6 +102,15 @@ export default function HeroGeometric({
   return (
     <div className="bg-black">
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#030303]">
+      {/* Sign In button in top right */}
+      <div className="absolute top-8 right-8 z-20">
+        <Link
+          to="/login"
+          className="px-5 py-2 rounded-lg bg-white/10 text-white font-semibold border border-white/20 hover:bg-blue-600 hover:text-white transition-colors duration-200 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+        >
+          Sign In
+        </Link>
+      </div>
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.05] via-transparent to-rose-500/[0.05] blur-3xl" />
 
       <div className="absolute inset-0 overflow-hidden">
@@ -178,12 +190,12 @@ export default function HeroGeometric({
           </motion.div>
 
           <motion.div custom={3} variants={fadeUpVariants} initial="hidden" animate="visible">
-            <a
-              href="/chat"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-white/[0.05] border border-white/[0.08] text-white hover:bg-white/[0.1] transition-colors duration-200"
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-blue-600 text-white text-lg font-semibold shadow-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
             >
               Get Started
-            </a>
+            </Link>
           </motion.div>
         </div>
       </div>

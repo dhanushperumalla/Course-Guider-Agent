@@ -13,4 +13,13 @@ plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://n8n.immandatory.in.net/webhook/1fa49c19-0909-46ad-b882-becf2b67e595',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
 });
