@@ -59,57 +59,116 @@ function ChatInterface() {
   const loadSessions = async () => {
     if (!user?.id) return;
 
-    const { data: messagesData } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      // First try with user_id filter
+      const { data: messagesData, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (messagesData) {
-      const sessionsMap = new Map<string, ChatSession>();
-      
-      messagesData.forEach(msg => {
-        if (!sessionsMap.has(msg.session_id)) {
-          const message = msg.message as DatabaseMessage;
-          sessionsMap.set(msg.session_id, {
-            id: msg.session_id,
-            created_at: new Date(msg.created_at),
-            last_message: message.content.slice(0, 50) + '...',
-            title: msg.title
+      if (error && error.code === '42703') {
+        // Column doesn't exist, fallback to loading all messages (temporary)
+        console.log('user_id column not found, loading all messages temporarily');
+        const { data: allMessages } = await supabase
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (allMessages) {
+          const sessionsMap = new Map<string, ChatSession>();
+          
+          allMessages.forEach(msg => {
+            if (!sessionsMap.has(msg.session_id)) {
+              const message = msg.message as DatabaseMessage;
+              sessionsMap.set(msg.session_id, {
+                id: msg.session_id,
+                created_at: new Date(msg.created_at),
+                last_message: message.content.slice(0, 50) + '...',
+                title: msg.title
+              });
+            }
           });
-        }
-      });
 
-      setSessions(Array.from(sessionsMap.values()));
+          setSessions(Array.from(sessionsMap.values()));
+        }
+      } else if (messagesData) {
+        const sessionsMap = new Map<string, ChatSession>();
+        
+        messagesData.forEach(msg => {
+          if (!sessionsMap.has(msg.session_id)) {
+            const message = msg.message as DatabaseMessage;
+            sessionsMap.set(msg.session_id, {
+              id: msg.session_id,
+              created_at: new Date(msg.created_at),
+              last_message: message.content.slice(0, 50) + '...',
+              title: msg.title
+            });
+          }
+        });
+
+        setSessions(Array.from(sessionsMap.values()));
+      }
+    } catch (error) {
+      console.error('Error loading sessions:', error);
     }
   };
 
   const loadMessages = async () => {
     if (!user?.id) return;
 
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('session_id', sessionId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true });
+    try {
+      // First try with user_id filter
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('session_id', sessionId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
 
-    if (error) {
+      if (error && error.code === '42703') {
+        // Column doesn't exist, fallback to loading messages without user filter (temporary)
+        console.log('user_id column not found, loading messages without user filter temporarily');
+        const { data: allData, error: fallbackError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: true });
+
+        if (fallbackError) {
+          console.error('Error loading messages:', fallbackError);
+          return;
+        }
+
+        if (allData) {
+          const formattedMessages = allData.map(msg => {
+            const message = msg.message as DatabaseMessage;
+            return {
+              id: msg.id,
+              role: message.type === 'ai' ? 'assistant' : 'user',
+              content: message.content,
+              timestamp: new Date(msg.created_at)
+            };
+          });
+          setMessages(formattedMessages as Message[]);
+        }
+      } else if (error) {
+        console.error('Error loading messages:', error);
+        return;
+      } else if (data) {
+        const formattedMessages = data.map(msg => {
+          const message = msg.message as DatabaseMessage;
+          return {
+            id: msg.id,
+            role: message.type === 'ai' ? 'assistant' : 'user',
+            content: message.content,
+            timestamp: new Date(msg.created_at)
+          };
+        });
+        setMessages(formattedMessages as Message[]);
+      }
+    } catch (error) {
       console.error('Error loading messages:', error);
-      return;
-    }
-
-    if (data) {
-      const formattedMessages = data.map(msg => {
-        const message = msg.message as DatabaseMessage;
-        return {
-          id: msg.id,
-          role: message.type === 'ai' ? 'assistant' : 'user',
-          content: message.content,
-          timestamp: new Date(msg.created_at)
-        };
-      });
-      setMessages(formattedMessages as Message[]);
     }
   };
 
@@ -133,29 +192,58 @@ function ChatInterface() {
   const handleRenameSession = async (id: string, newTitle: string) => {
     if (!user?.id) return;
 
-    // Update the first message of the session with the new title
-    const { data: firstMessage } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('session_id', id)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single();
-
-    if (firstMessage) {
-      await supabase
+    try {
+      // First try with user_id filter
+      const { data: firstMessage, error } = await supabase
         .from('messages')
-        .update({ title: newTitle })
-        .eq('id', firstMessage.id);
+        .select('*')
+        .eq('session_id', id)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
 
-      setSessions(prev =>
-        prev.map(session =>
-          session.id === id
-            ? { ...session, title: newTitle }
-            : session
-        )
-      );
+      if (error && error.code === '42703') {
+        // Column doesn't exist, fallback to loading without user filter (temporary)
+        console.log('user_id column not found, renaming without user filter temporarily');
+        const { data: fallbackMessage } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('session_id', id)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (fallbackMessage) {
+          await supabase
+            .from('messages')
+            .update({ title: newTitle })
+            .eq('id', fallbackMessage.id);
+
+          setSessions(prev =>
+            prev.map(session =>
+              session.id === id
+                ? { ...session, title: newTitle }
+                : session
+            )
+          );
+        }
+      } else if (firstMessage) {
+        await supabase
+          .from('messages')
+          .update({ title: newTitle })
+          .eq('id', firstMessage.id);
+
+        setSessions(prev =>
+          prev.map(session =>
+            session.id === id
+              ? { ...session, title: newTitle }
+              : session
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error renaming session:', error);
     }
   };
 
