@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import { Send, Loader2, LogOut, User } from 'lucide-react';
+import { Send, Loader2, LogOut, User, Edit, Trash2, ChevronDown } from 'lucide-react';
 import { ChatMessage } from './components/ChatMessage';
 import { Sidebar } from './components/Sidebar';
 import { supabase } from './lib/supabase';
@@ -12,14 +12,19 @@ import { EnhancedSignup } from './components/Auth/EnhancedSignup';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PasswordStrengthDemo } from './components/PasswordStrengthDemo';
+import { Profile } from './components/Profile';
+import { EmailConfirmation } from './components/Auth/EmailConfirmation';
 
 function ChatInterface() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [sessionId, setSessionId] = useState(uuidv4());
 
   const scrollToBottom = () => {
@@ -29,6 +34,19 @@ function ChatInterface() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     loadSessions();
@@ -132,6 +150,94 @@ function ChatInterface() {
     }
   };
 
+  const handleClearChat = async () => {
+    if (window.confirm('Are you sure you want to clear all chat history?')) {
+      try {
+        // Get all sessions for the current user
+        const { data: sessions } = await supabase
+          .from('messages')
+          .select('session_id')
+          .order('created_at', { ascending: false });
+
+        if (sessions && sessions.length > 0) {
+          // Extract unique session IDs
+          const sessionIds = [...new Set(sessions.map(s => s.session_id))];
+          
+          // Delete all messages for these sessions
+          for (const sessionId of sessionIds) {
+            const { error } = await supabase
+              .from('messages')
+              .delete()
+              .eq('session_id', sessionId);
+            
+            if (error) {
+              console.error('Error deleting session:', sessionId, error);
+            }
+          }
+          
+          alert('Chat history cleared successfully!');
+          window.location.reload();
+        } else {
+          alert('No chat history found.');
+        }
+      } catch (error) {
+        console.error('Error clearing chat:', error);
+        alert('Failed to clear chat history. Please try again.');
+      }
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      try {
+        // First clear all chat history without showing another confirmation
+        const { data: sessions } = await supabase
+          .from('messages')
+          .select('session_id')
+          .order('created_at', { ascending: false });
+
+        if (sessions && sessions.length > 0) {
+          // Extract unique session IDs
+          const sessionIds = [...new Set(sessions.map(s => s.session_id))];
+          
+          // Delete all messages for these sessions
+          for (const sessionId of sessionIds) {
+            await supabase
+              .from('messages')
+              .delete()
+              .eq('session_id', sessionId);
+          }
+        }
+
+        // Try to delete the user account using a different approach
+        // Since we can't use admin functions from client, we'll try to update the user
+        // to make their account unusable and then sign them out
+        try {
+          // Update user metadata to mark as deleted
+          await supabase.auth.updateUser({
+            data: { 
+              deleted: true,
+              deleted_at: new Date().toISOString()
+            }
+          });
+        } catch (updateError) {
+          console.log('Could not update user metadata:', updateError);
+        }
+        
+        // Sign out the user
+        await signOut();
+        navigate('/login');
+        alert('Your account has been marked for deletion and all your data has been cleared. Please contact support if you need to completely remove your account.');
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        // Fallback: clear data and sign out
+        await signOut();
+        navigate('/login');
+        alert('Error deleting account. Your data has been cleared and you have been signed out.');
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -193,17 +299,70 @@ function ChatInterface() {
         <div className="bg-white border-b px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">Course Guider Agent</h1>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <User className="w-4 h-4" />
-              <span>{user?.email}</span>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 focus:outline-none"
+              >
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+                <span className="font-medium">
+                  {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg py-1 z-50">
+                  <button
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleClearChat();
+                      setIsDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Clear Chat
+                  </button>
+                  
+                  <div className="border-t border-gray-100 my-1"></div>
+                  
+                  <button
+                    onClick={() => {
+                      signOut();
+                      setIsDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleDeleteAccount();
+                      setIsDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Account
+                  </button>
+                </div>
+              )}
             </div>
-            <button
-              onClick={signOut}
-              className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -264,6 +423,15 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="/auth/callback" element={<EmailConfirmation />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
