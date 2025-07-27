@@ -50,7 +50,11 @@ function ChatInterface() {
 
   useEffect(() => {
     loadSessions();
-  }, []);
+    // Auto-assign user_id to messages that don't have it
+    if (user?.id) {
+      assignUserIdToMessages();
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     loadMessages();
@@ -92,6 +96,32 @@ function ChatInterface() {
 
           setSessions(Array.from(sessionsMap.values()));
         }
+      } else if (error && error.message?.includes('No rows returned')) {
+        // No messages found for this user, try loading messages with NULL user_id (legacy data)
+        console.log('No user-specific messages found, loading legacy messages temporarily');
+        const { data: legacyMessages } = await supabase
+          .from('messages')
+          .select('*')
+          .is('user_id', null)
+          .order('created_at', { ascending: false });
+
+        if (legacyMessages) {
+          const sessionsMap = new Map<string, ChatSession>();
+          
+          legacyMessages.forEach(msg => {
+            if (!sessionsMap.has(msg.session_id)) {
+              const message = msg.message as DatabaseMessage;
+              sessionsMap.set(msg.session_id, {
+                id: msg.session_id,
+                created_at: new Date(msg.created_at),
+                last_message: message.content.slice(0, 50) + '...',
+                title: msg.title
+              });
+            }
+          });
+
+          setSessions(Array.from(sessionsMap.values()));
+        }
       } else if (messagesData) {
         const sessionsMap = new Map<string, ChatSession>();
         
@@ -111,6 +141,28 @@ function ChatInterface() {
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
+    }
+  };
+
+  const assignUserIdToMessages = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Update messages that don't have user_id assigned
+      const { error } = await supabase
+        .from('messages')
+        .update({ user_id: user.id })
+        .is('user_id', null);
+
+      if (error) {
+        console.error('Error assigning user_id to messages:', error);
+      } else {
+        console.log('Successfully assigned user_id to messages');
+        // Reload sessions after assigning user_id
+        await loadSessions();
+      }
+    } catch (error) {
+      console.error('Error in assignUserIdToMessages:', error);
     }
   };
 
@@ -142,6 +194,33 @@ function ChatInterface() {
 
         if (allData) {
           const formattedMessages = allData.map(msg => {
+            const message = msg.message as DatabaseMessage;
+            return {
+              id: msg.id,
+              role: message.type === 'ai' ? 'assistant' : 'user',
+              content: message.content,
+              timestamp: new Date(msg.created_at)
+            };
+          });
+          setMessages(formattedMessages as Message[]);
+        }
+      } else if (error && error.message?.includes('No rows returned')) {
+        // No messages found for this user, try loading messages with NULL user_id (legacy data)
+        console.log('No user-specific messages found, loading legacy messages temporarily');
+        const { data: legacyData, error: legacyError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('session_id', sessionId)
+          .is('user_id', null)
+          .order('created_at', { ascending: true });
+
+        if (legacyError) {
+          console.error('Error loading legacy messages:', legacyError);
+          return;
+        }
+
+        if (legacyData) {
+          const formattedMessages = legacyData.map(msg => {
             const message = msg.message as DatabaseMessage;
             return {
               id: msg.id,
@@ -366,7 +445,8 @@ function ChatInterface() {
         },
         body: JSON.stringify({
           query: input,
-          session_id: sessionId
+          session_id: sessionId,
+          user_id: user?.id
         }),
       });
 
