@@ -28,7 +28,8 @@ export function EmailConfirmation() {
           return;
         }
 
-        if (type === 'email_confirmation' && accessToken && refreshToken) {
+        // Check if we have tokens in the URL (email confirmation)
+        if (accessToken && refreshToken) {
           // Set the session with the tokens from the email confirmation
           const { data, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -51,10 +52,18 @@ export function EmailConfirmation() {
           setMessage('Password recovery link processed. You can now reset your password.');
           setTimeout(() => navigate('/login'), 3000);
         } else {
-          // Handle other auth callbacks or missing parameters
-          setStatus('error');
-          setMessage('Invalid confirmation link. Please try again.');
-          setTimeout(() => navigate('/login'), 3000);
+          // Check if user is already authenticated (might happen if they refresh the page)
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            setStatus('success');
+            setMessage('Email confirmed successfully! Redirecting to chat...');
+            setTimeout(() => navigate('/chat'), 2000);
+          } else {
+            // Handle other auth callbacks or missing parameters
+            setStatus('error');
+            setMessage('Invalid confirmation link. Please try again.');
+            setTimeout(() => navigate('/login'), 3000);
+          }
         }
       } catch (error) {
         console.error('Error during email confirmation:', error);

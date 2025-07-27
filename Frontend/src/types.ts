@@ -12,6 +12,15 @@ export interface DatabaseMessage {
   response_metadata: Record<string, unknown>;
 }
 
+export interface DatabaseMessageRow {
+  id: string;
+  session_id: string;
+  user_id: string;
+  message: DatabaseMessage;
+  created_at: string;
+  title?: string;
+}
+
 export interface ChatMessage {
   query: string;
 }

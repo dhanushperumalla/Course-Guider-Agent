@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PlusCircle, MessageSquare, Trash2, Edit2, Check, X } from 'lucide-react';
 import { ChatSession } from '../types';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
   sessions: ChatSession[];
@@ -11,7 +12,6 @@ interface SidebarProps {
   onDeleteSession: (sessionId: string) => void;
   onRenameSession: (sessionId: string, newTitle: string) => void;
 }
-
 export const Sidebar: React.FC<SidebarProps> = ({
   sessions,
   currentSessionId,
@@ -20,13 +20,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteSession,
   onRenameSession,
 }) => {
+  const { user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
 
   const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to delete this chat?')) {
-      await supabase.from('messages').delete().eq('session_id', sessionId);
+      if (user?.id) {
+        await supabase
+          .from('messages')
+          .delete()
+          .eq('session_id', sessionId)
+          .eq('user_id', user.id);
+      }
       onDeleteSession(sessionId);
     }
   };
