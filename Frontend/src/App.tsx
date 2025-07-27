@@ -57,9 +57,12 @@ function ChatInterface() {
   }, [sessionId]);
 
   const loadSessions = async () => {
+    if (!user?.id) return;
+
     const { data: messagesData } = await supabase
       .from('messages')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (messagesData) {
@@ -82,10 +85,13 @@ function ChatInterface() {
   };
 
   const loadMessages = async () => {
+    if (!user?.id) return;
+
     const { data, error } = await supabase
       .from('messages')
       .select('*')
       .eq('session_id', sessionId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -125,11 +131,14 @@ function ChatInterface() {
   };
 
   const handleRenameSession = async (id: string, newTitle: string) => {
+    if (!user?.id) return;
+
     // Update the first message of the session with the new title
     const { data: firstMessage } = await supabase
       .from('messages')
       .select('*')
       .eq('session_id', id)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: true })
       .limit(1)
       .single();
@@ -151,12 +160,15 @@ function ChatInterface() {
   };
 
   const handleClearChat = async () => {
+    if (!user?.id) return;
+
     if (window.confirm('Are you sure you want to clear all chat history?')) {
       try {
         // Get all sessions for the current user
         const { data: sessions } = await supabase
           .from('messages')
           .select('session_id')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (sessions && sessions.length > 0) {
@@ -168,7 +180,8 @@ function ChatInterface() {
             const { error } = await supabase
               .from('messages')
               .delete()
-              .eq('session_id', sessionId);
+              .eq('session_id', sessionId)
+              .eq('user_id', user.id);
             
             if (error) {
               console.error('Error deleting session:', sessionId, error);
@@ -188,12 +201,15 @@ function ChatInterface() {
   };
 
   const handleDeleteAccount = async () => {
+    if (!user?.id) return;
+
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       try {
         // First clear all chat history without showing another confirmation
         const { data: sessions } = await supabase
           .from('messages')
           .select('session_id')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (sessions && sessions.length > 0) {
@@ -205,7 +221,8 @@ function ChatInterface() {
             await supabase
               .from('messages')
               .delete()
-              .eq('session_id', sessionId);
+              .eq('session_id', sessionId)
+              .eq('user_id', user.id);
           }
         }
 
