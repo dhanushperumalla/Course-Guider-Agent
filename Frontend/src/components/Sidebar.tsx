@@ -12,7 +12,6 @@ interface SidebarProps {
   onDeleteSession: (sessionId: string) => void;
   onRenameSession: (sessionId: string, newTitle: string) => void;
 }
-
 export const Sidebar: React.FC<SidebarProps> = ({
   sessions,
   currentSessionId,
