@@ -24,8 +24,15 @@ export function Login() {
 
       if (error) {
         setError(error.message);
-      } else {
-        navigate('/chat');
+      } else if (data.user) {
+        // Check if the account has been marked as deleted
+        if (data.user.user_metadata?.deleted) {
+          // Sign out the user immediately
+          await supabase.auth.signOut();
+          setError('This account has been deleted. Please contact support if you believe this is an error.');
+        } else {
+          navigate('/chat');
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred');
