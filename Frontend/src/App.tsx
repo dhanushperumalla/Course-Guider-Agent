@@ -170,81 +170,71 @@ function ChatInterface() {
     if (!user?.id) return;
 
     try {
+      let data: any[] | null = null;
+      let error: any = null;
+
       // First try with user_id filter
-      const { data, error } = await supabase
+      const result = await supabase
         .from('messages')
         .select('*')
         .eq('session_id', sessionId)
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
-      if (error && error.code === '42703') {
-        // Column doesn't exist, fallback to loading messages without user filter (temporary)
-        console.log('user_id column not found, loading messages without user filter temporarily');
-        const { data: allData, error: fallbackError } = await supabase
+      data = result.data;
+      error = result.error;
+
+      // If column doesn't exist or no user-specific messages, try without user_id filter
+      if ((error && error.code === '42703') || (data && data.length === 0)) {
+        const fallbackResult = await supabase
           .from('messages')
           .select('*')
           .eq('session_id', sessionId)
           .order('created_at', { ascending: true });
 
-        if (fallbackError) {
-          console.error('Error loading messages:', fallbackError);
-          return;
-        }
+        if (!fallbackResult.error && fallbackResult.data) {
+          data = fallbackResult.data;
+          error = null;
+        } else if (fallbackResult.error && fallbackResult.error.code !== '42703') {
+          // Try with NULL user_id (for legacy data or newly created messages)
+          const legacyResult = await supabase
+            .from('messages')
+            .select('*')
+            .eq('session_id', sessionId)
+            .is('user_id', null)
+            .order('created_at', { ascending: true });
 
-        if (allData) {
-          const formattedMessages = allData.map(msg => {
-            const message = msg.message as DatabaseMessage;
-            return {
-              id: msg.id,
-              role: message.type === 'ai' ? 'assistant' : 'user',
-              content: message.content,
-              timestamp: new Date(msg.created_at)
-            };
-          });
-          setMessages(formattedMessages as Message[]);
+          if (!legacyResult.error && legacyResult.data) {
+            data = legacyResult.data;
+            error = null;
+          }
         }
-      } else if (error && error.message?.includes('No rows returned')) {
-        // No messages found for this user, try loading messages with NULL user_id (legacy data)
-        console.log('No user-specific messages found, loading legacy messages temporarily');
-        const { data: legacyData, error: legacyError } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('session_id', sessionId)
-          .is('user_id', null)
-          .order('created_at', { ascending: true });
+      }
 
-        if (legacyError) {
-          console.error('Error loading legacy messages:', legacyError);
-          return;
-        }
-
-        if (legacyData) {
-          const formattedMessages = legacyData.map(msg => {
-            const message = msg.message as DatabaseMessage;
-            return {
-              id: msg.id,
-              role: message.type === 'ai' ? 'assistant' : 'user',
-              content: message.content,
-              timestamp: new Date(msg.created_at)
-            };
-          });
-          setMessages(formattedMessages as Message[]);
-        }
-      } else if (error) {
+      if (error && error.code !== '42703') {
         console.error('Error loading messages:', error);
         return;
-      } else if (data) {
+      }
+
+      if (data && data.length > 0) {
         const formattedMessages = data.map(msg => {
           const message = msg.message as DatabaseMessage;
+          if (!message || !message.content) {
+            console.warn('Invalid message format:', msg);
+            return null;
+          }
           return {
             id: msg.id,
-            role: message.type === 'ai' ? 'assistant' : 'user',
-            content: message.content,
+            role: message.type === 'ai' ? 'assistant' : (message.type === 'human' ? 'user' : 'assistant'),
+            content: message.content || '',
             timestamp: new Date(msg.created_at)
           };
-        });
-        setMessages(formattedMessages as Message[]);
+        }).filter((msg): msg is Message => msg !== null);
+
+        setMessages(formattedMessages);
+      } else {
+        // No messages found, set empty array
+        setMessages([]);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -433,6 +423,7 @@ function ChatInterface() {
       timestamp: new Date()
     };
 
+    const userInput = input;
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
@@ -444,15 +435,67 @@ function ChatInterface() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: input,
+          query: userInput,
           session_id: sessionId,
           user_id: user?.id
         }),
       });
 
-      // Wait for messages to be processed through n8n and stored in Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
 
+      // Poll for new messages with exponential backoff
+      // The API saves messages to Supabase, so we need to wait and check
+      let attempts = 0;
+      const maxAttempts = 15;
+      let lastMessageCount = 0;
+      
+      while (attempts < maxAttempts) {
+        // Wait before checking (exponential backoff: 500ms, 750ms, 1125ms, etc.)
+        const delay = 500 * Math.pow(1.5, attempts);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        // Check current message count in database (try multiple approaches)
+        let currentMessages: any[] | null = null;
+        
+        // First try with user_id filter
+        const result = await supabase
+          .from('messages')
+          .select('id')
+          .eq('session_id', sessionId)
+          .eq('user_id', user?.id || '')
+          .order('created_at', { ascending: true });
+
+        if (!result.error && result.data && result.data.length > 0) {
+          currentMessages = result.data;
+        } else {
+          // Try without user_id filter (messages might not have user_id set yet)
+          const fallbackResult = await supabase
+            .from('messages')
+            .select('id')
+            .eq('session_id', sessionId)
+            .order('created_at', { ascending: true });
+
+          if (!fallbackResult.error && fallbackResult.data) {
+            currentMessages = fallbackResult.data;
+          }
+        }
+
+        const currentCount = currentMessages?.length || 0;
+        
+        // If we have new messages (at least 2: user message + AI response), reload and break
+        if (currentCount > lastMessageCount && currentCount >= 2) {
+          await loadMessages();
+          await loadSessions();
+          break;
+        }
+        
+        lastMessageCount = currentCount;
+        attempts++;
+      }
+
+      // Final load to ensure we have all messages
       await loadMessages();
       await loadSessions();
     } catch (error) {
